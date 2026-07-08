@@ -78,8 +78,9 @@ function startGame() {
     state.left
   );
   els.leftPoints.textContent = state.left.points;
-  els.leftCard.classList.remove("flash-correct", "flash-wrong");
-  els.rightCard.classList.remove("flash-correct", "flash-wrong");
+  els.leftCard.classList.remove("flash-correct", "flash-wrong", "pop-in");
+  els.rightCard.classList.remove("flash-correct", "flash-wrong", "slide-winner", "pop-in");
+  els.rightCard.style.transform = "";
 
   showRightHidden();
   updateScoreDisplay();
@@ -93,6 +94,12 @@ function showRightHidden() {
   els.rightPoints.textContent = "?";
   els.rightPointsLabel.textContent = "Higher or Lower?";
   els.rightCard.classList.add("hidden-points");
+}
+
+function playAnim(el, className) {
+  el.classList.remove(className);
+  void el.offsetWidth;
+  el.classList.add(className);
 }
 
 function updateScoreDisplay() {
@@ -109,6 +116,7 @@ function handleGuess(direction) {
   els.rightPoints.textContent = state.right.points;
   els.rightPointsLabel.textContent = "Fantasy Points (PPR)";
   els.rightCard.classList.remove("hidden-points");
+  playAnim(els.rightPoints, "reveal-points");
 
   const correct =
     state.right.points === state.left.points ||
@@ -116,32 +124,50 @@ function handleGuess(direction) {
     (direction === "lower" && state.right.points < state.left.points);
 
   if (correct) {
-    els.rightCard.classList.add("flash-correct");
+    playAnim(els.rightCard, "flash-correct");
     state.score += 1;
     if (state.score > state.highScore) {
       state.highScore = state.score;
       localStorage.setItem("ffHighScore", String(state.highScore));
     }
     updateScoreDisplay();
+    playAnim(els.score, "bump");
 
     setTimeout(() => {
-      state.left = state.right;
-      state.right = drawUnusedCard();
+      const leftRect = els.leftCard.getBoundingClientRect();
+      const rightRect = els.rightCard.getBoundingClientRect();
+      const dx = leftRect.left - rightRect.left;
+      const dy = leftRect.top - rightRect.top;
 
-      fillCard(
-        { avatarEl: els.leftAvatar, nameEl: els.leftName, metaEl: els.leftMeta, card: els.leftCard },
-        state.left
-      );
-      els.leftPoints.textContent = state.left.points;
+      els.rightCard.classList.add("slide-winner");
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          els.rightCard.style.transform = `translate(${dx}px, ${dy}px)`;
+        });
+      });
 
-      showRightHidden();
-      els.rightCard.classList.remove("flash-correct");
-      state.locked = false;
-      els.btnHigher.disabled = false;
-      els.btnLower.disabled = false;
-    }, 900);
+      setTimeout(() => {
+        state.left = state.right;
+        state.right = drawUnusedCard();
+
+        fillCard(
+          { avatarEl: els.leftAvatar, nameEl: els.leftName, metaEl: els.leftMeta, card: els.leftCard },
+          state.left
+        );
+        els.leftPoints.textContent = state.left.points;
+
+        els.rightCard.classList.remove("slide-winner", "flash-correct");
+        els.rightCard.style.transform = "";
+
+        showRightHidden();
+        playAnim(els.rightCard, "pop-in");
+        state.locked = false;
+        els.btnHigher.disabled = false;
+        els.btnLower.disabled = false;
+      }, 650);
+    }, 300);
   } else {
-    els.rightCard.classList.add("flash-wrong");
+    playAnim(els.rightCard, "flash-wrong");
     setTimeout(() => {
       els.finalAnswer.textContent = `${state.right.player} (${state.right.year}) had ${state.right.points} points vs. ${state.left.player}'s ${state.left.points}.`;
       els.finalScore.textContent = state.score;
