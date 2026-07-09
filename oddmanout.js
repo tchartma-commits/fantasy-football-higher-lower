@@ -65,7 +65,19 @@ function omoRenderRound(round) {
 
     const avatar = document.createElement("div");
     avatar.className = `card-avatar pos-${player.position}`;
-    avatar.textContent = omoInitials(player.name);
+    if (player.photo) {
+      const img = document.createElement("img");
+      img.src = player.photo;
+      img.alt = player.name;
+      img.className = "card-avatar-img";
+      img.onerror = () => {
+        avatar.innerHTML = "";
+        avatar.textContent = omoInitials(player.name);
+      };
+      avatar.appendChild(img);
+    } else {
+      avatar.textContent = omoInitials(player.name);
+    }
 
     const name = document.createElement("div");
     name.className = "omo-tile-name";
